@@ -11,11 +11,11 @@ export default function InjonctionGenerator({ dossier }) {
 `Requete en injonction de payer
 Tribunal: ${tribunal}
 
-Demandeur:
+`Demandeur:
 ${dossier.creditorName}
 ${dossier.creditorAddress}
 
-Debiteur:
+`Debiteur:
 ${dossier.debtorName}
 ${dossier.debtorAddress}
 
