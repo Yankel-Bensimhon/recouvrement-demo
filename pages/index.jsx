@@ -1,3 +1,4 @@
+// pages/index.jsx
 import Navbar from "../components/Navbar";
 import HeroSection from "../components/HeroSection";
 import AccueilActions from "../components/AccueilActions";
@@ -9,15 +10,17 @@ import Footer from "../components/Footer";
 
 export default function Home() {
   return (
-    <div>
+    <>
       <Navbar />
       <HeroSection />
       <AccueilActions />
       <TimeLineRecouvrement />
       <LegalModes />
       <AvantagesAvocat />
-      <MiseEnDemeureGenerator />
+      <section id="med">
+        <MiseEnDemeureGenerator />
+      </section>
       <Footer />
-    </div>
+    </>
   );
 }
