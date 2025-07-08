@@ -1,9 +1,9 @@
 import Navbar from "@/components/navbar";
-import HeroSection from "@/components/herosection";
-import TimelineRecouvrement from "@/components/timelinerecouvrement";
-import LegalModes from "@/components/legalmodes";
-import AvantagesAvocat from "@/components/avantagesavocat";
-import AccueilActions from "@/components/accueilactions";
+import HeroSection from "@/components/HeroSection";
+import TimelineRecouvrement from "@/components/TimeLineRecouvrement";
+import LegalModes from "@/components/LegalModes";
+import AvantagesAvocat from "@/components/AvantagesAvocat";
+import AccueilActions from "@/components/AccueilActions";
 import MiseEnDemeureGenerator from "@/components/MiseEnDemeureGenerator";
 import Footer from "@/components/footer";
 
