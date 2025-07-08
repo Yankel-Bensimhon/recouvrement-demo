@@ -1,168 +1,141 @@
 import React, { useState } from "react";
 import { jsPDF } from "jspdf";
 
+const LOGO_URL = "https://upload.wikimedia.org/wikipedia/commons/6/6b/Bitmap_Logo.png"; // Mets ici l’URL de TON logo
+const FOOTER = "Service opéré par le Cabinet d'avocat Yankel BENSIMHON • 43 Avenue Foch 75116 Paris";
+
 export default function MiseEnDemeureGenerator() {
   const [form, setForm] = useState({
-    creditorType: "Société",
-    creditorName: "",
+    creditor: "",
     creditorAddress: "",
-    creditorEmail: "",
-    debtorType: "Société",
-    debtorName: "",
+    debtor: "",
     debtorAddress: "",
+    amount: "",
     invoiceNumber: "",
     invoiceDate: "",
     dueDate: "",
-    amount: "",
-    object: "",
-    paymentDelay: "8",
+    city: "",
+    date: "",
   });
-  const [preview, setPreview] = useState("");
-  const [showPreview, setShowPreview] = useState(false);
 
-  const handleChange = (e) => {
+  const [loading, setLoading] = useState(false);
+
+  const handleChange = e => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  // Template de la lettre
-  const generateLetter = () => {
-    return `
-${form.creditorType} ${form.creditorName}
-${form.creditorAddress}
-${form.creditorEmail && `Email : ${form.creditorEmail}`}
+  const handleDownloadPDF = async () => {
+    setLoading(true);
+    const doc = new jsPDF({ unit: "mm", format: "a4" });
 
-À
-${form.debtorType} ${form.debtorName}
-${form.debtorAddress}
+    // Logo
+    try {
+      const logoData = await toDataURL(LOGO_URL);
+      doc.addImage(logoData, "PNG", 15, 10, 40, 18);
+    } catch (err) {
+      // Ignore si le logo ne se charge pas
+    }
 
-Le ${new Date().toLocaleDateString("fr-FR")}
+    // En-tête
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("MISE EN DEMEURE", 105, 40, { align: "center" });
 
-Objet : Mise en demeure de payer – Facture n°${form.invoiceNumber} du ${form.invoiceDate} – Montant : ${form.amount} €
+    // Parties
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Créancier : ${form.creditor}`, 15, 50);
+    doc.text(form.creditorAddress, 15, 55);
+    doc.text(`Débiteur : ${form.debtor}`, 15, 65);
+    doc.text(form.debtorAddress, 15, 70);
+
+    // Corps personnalisé (modifie ici ton texte modèle)
+    let corps = `
+${form.city}, le ${form.date}
+
+Objet : Mise en demeure de payer la facture n° ${form.invoiceNumber}
 
 Madame, Monsieur,
 
-Je me permets, par la présente, de vous mettre en demeure de procéder au paiement de la somme de ${form.amount} €, relative à la facture n°${form.invoiceNumber} émise le ${form.invoiceDate}, venue à échéance le ${form.dueDate}, restée impayée à ce jour.
+Nous vous rappelons que la facture n° ${form.invoiceNumber} d'un montant de ${form.amount} €, émise le ${form.invoiceDate} et venue à échéance le ${form.dueDate}, demeure impayée à ce jour.
 
-Malgré nos précédentes relances, le paiement n’a toujours pas été effectué. Je vous rappelle que le non-règlement de cette créance constitue un manquement à vos obligations contractuelles (${form.object}).
+En conséquence, nous vous mettons en demeure de procéder au règlement de cette somme sous un délai de 8 jours à compter de la réception de la présente, faute de quoi nous nous réservons le droit d’engager toute procédure judiciaire nécessaire à la sauvegarde de nos droits, sans autre avis ni délai.
 
-En conséquence, je vous mets en demeure de régler ladite somme sous ${form.paymentDelay} jours à compter de la réception de ce courrier. À défaut de paiement dans ce délai, nous nous réservons le droit d’engager toute procédure de recouvrement, y compris judiciaire, à vos frais exclusifs.
+Nous vous prions d’agréer, Madame, Monsieur, l’expression de nos salutations distinguées.
 
-Veuillez agréer, Madame, Monsieur, l’expression de nos salutations distinguées.
-
-${form.creditorType} ${form.creditorName}
-
-Pièces jointes : copie de la facture
 `;
-  };
 
-  const handlePreview = (e) => {
-    e.preventDefault();
-    setPreview(generateLetter());
-    setShowPreview(true);
-  };
+    doc.setFontSize(11);
+    doc.setFont("times", "normal");
+    doc.text(doc.splitTextToSize(corps, 180), 15, 85);
 
-  const handleDownloadPDF = () => {
-    const doc = new jsPDF();
-    const lines = generateLetter().split("\n");
-    let y = 10;
-    lines.forEach((line) => {
-      doc.text(line, 10, y);
-      y += 8;
-    });
+    // Footer
+    doc.setFontSize(9);
+    doc.setTextColor(110);
+    doc.text(FOOTER, 15, 287);
+
     doc.save("Mise_en_demeure.pdf");
+    setLoading(false);
   };
+
+  // Convertit une image en base64
+  function toDataURL(url) {
+    return fetch(url)
+      .then(response => response.blob())
+      .then(blob => new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      }));
+  }
 
   return (
-    <div className="max-w-2xl mx-auto bg-white rounded-2xl shadow-xl p-8 my-12">
-      <h1 className="text-2xl font-bold mb-4 text-center">Générez votre lettre de mise en demeure gratuitement</h1>
-      <form className="space-y-4" onSubmit={handlePreview}>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="font-semibold">Type créancier</label>
-            <select name="creditorType" value={form.creditorType} onChange={handleChange} className="w-full border rounded p-2">
-              <option>Société</option>
-              <option>Monsieur</option>
-              <option>Madame</option>
-            </select>
-          </div>
-          <div>
-            <label className="font-semibold">Nom / Société (créancier)</label>
-            <input type="text" name="creditorName" value={form.creditorName} onChange={handleChange} className="w-full border rounded p-2" required />
-          </div>
-          <div className="col-span-2">
-            <label className="font-semibold">Adresse (créancier)</label>
-            <input type="text" name="creditorAddress" value={form.creditorAddress} onChange={handleChange} className="w-full border rounded p-2" required />
-          </div>
-          <div className="col-span-2">
-            <label className="font-semibold">E-mail (créancier)</label>
-            <input type="email" name="creditorEmail" value={form.creditorEmail} onChange={handleChange} className="w-full border rounded p-2" />
-          </div>
-        </div>
-        <hr className="my-2" />
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="font-semibold">Type débiteur</label>
-            <select name="debtorType" value={form.debtorType} onChange={handleChange} className="w-full border rounded p-2">
-              <option>Société</option>
-              <option>Monsieur</option>
-              <option>Madame</option>
-            </select>
-          </div>
-          <div>
-            <label className="font-semibold">Nom / Société (débiteur)</label>
-            <input type="text" name="debtorName" value={form.debtorName} onChange={handleChange} className="w-full border rounded p-2" required />
-          </div>
-          <div className="col-span-2">
-            <label className="font-semibold">Adresse (débiteur)</label>
-            <input type="text" name="debtorAddress" value={form.debtorAddress} onChange={handleChange} className="w-full border rounded p-2" required />
-          </div>
-        </div>
-        <hr className="my-2" />
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="font-semibold">N° de facture/contrat</label>
-            <input type="text" name="invoiceNumber" value={form.invoiceNumber} onChange={handleChange} className="w-full border rounded p-2" required />
-          </div>
-          <div>
-            <label className="font-semibold">Date de facture</label>
-            <input type="date" name="invoiceDate" value={form.invoiceDate} onChange={handleChange} className="w-full border rounded p-2" required />
-          </div>
-          <div>
-            <label className="font-semibold">Date d’échéance</label>
-            <input type="date" name="dueDate" value={form.dueDate} onChange={handleChange} className="w-full border rounded p-2" required />
-          </div>
-          <div>
-            <label className="font-semibold">Montant dû (€)</label>
-            <input type="number" name="amount" value={form.amount} onChange={handleChange} className="w-full border rounded p-2" required />
-          </div>
+    <div className="max-w-xl mx-auto bg-white p-8 rounded-xl shadow my-8">
+      <h2 className="text-xl font-bold mb-4">Générateur de mise en demeure</h2>
+      <div className="grid grid-cols-2 gap-4 mb-4">
+        <div>
+          <label className="block font-semibold">Créancier</label>
+          <input name="creditor" className="border p-2 rounded w-full" value={form.creditor} onChange={handleChange} />
+          <input name="creditorAddress" className="border p-2 rounded w-full mt-2" placeholder="Adresse créancier" value={form.creditorAddress} onChange={handleChange} />
         </div>
         <div>
-          <label className="font-semibold">Objet de la créance (nature : vente, prestation, etc.)</label>
-          <input type="text" name="object" value={form.object} onChange={handleChange} className="w-full border rounded p-2" required />
+          <label className="block font-semibold">Débiteur</label>
+          <input name="debtor" className="border p-2 rounded w-full" value={form.debtor} onChange={handleChange} />
+          <input name="debtorAddress" className="border p-2 rounded w-full mt-2" placeholder="Adresse débiteur" value={form.debtorAddress} onChange={handleChange} />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-4 mb-4">
+        <div>
+          <label>Montant (€)</label>
+          <input name="amount" className="border p-2 rounded w-full" value={form.amount} onChange={handleChange} />
+          <label className="mt-2 block">Numéro facture</label>
+          <input name="invoiceNumber" className="border p-2 rounded w-full" value={form.invoiceNumber} onChange={handleChange} />
         </div>
         <div>
-          <label className="font-semibold">Délai de paiement demandé (jours)</label>
-          <input type="number" name="paymentDelay" value={form.paymentDelay} onChange={handleChange} className="w-full border rounded p-2" min="5" max="30" required />
+          <label>Date facture</label>
+          <input name="invoiceDate" className="border p-2 rounded w-full" value={form.invoiceDate} onChange={handleChange} />
+          <label className="mt-2 block">Date échéance</label>
+          <input name="dueDate" className="border p-2 rounded w-full" value={form.dueDate} onChange={handleChange} />
         </div>
-        <div className="flex items-center">
-          <input type="checkbox" id="rgpd" required className="mr-2" />
-          <label htmlFor="rgpd" className="text-sm">J’accepte que mes données soient utilisées pour la génération du document conformément à la politique de confidentialité.</label>
+      </div>
+      <div className="flex gap-4 mb-4">
+        <div>
+          <label>Ville</label>
+          <input name="city" className="border p-2 rounded w-full" value={form.city} onChange={handleChange} />
         </div>
-        <div className="flex justify-between mt-4">
-          <button type="submit" className="bg-blue-600 text-white rounded px-4 py-2 font-bold hover:bg-blue-700 transition">Prévisualiser la lettre</button>
-          {showPreview && (
-            <button type="button" className="bg-green-600 text-white rounded px-4 py-2 font-bold hover:bg-green-700 transition" onClick={handleDownloadPDF}>
-              Télécharger PDF
-            </button>
-          )}
+        <div>
+          <label>Date</label>
+          <input name="date" className="border p-2 rounded w-full" value={form.date} onChange={handleChange} placeholder="jj/mm/aaaa" />
         </div>
-      </form>
-      {showPreview && (
-        <div className="mt-8 border-t pt-6">
-          <h2 className="text-xl font-semibold mb-2">Prévisualisation</h2>
-          <pre className="whitespace-pre-wrap bg-gray-100 rounded p-4">{preview}</pre>
-        </div>
-      )}
+      </div>
+      <button
+        onClick={handleDownloadPDF}
+        disabled={loading}
+        className="mt-2 bg-blue-700 text-white px-6 py-2 rounded shadow hover:bg-blue-800 transition"
+      >
+        {loading ? "Génération..." : "Télécharger PDF"}
+      </button>
     </div>
   );
 }
