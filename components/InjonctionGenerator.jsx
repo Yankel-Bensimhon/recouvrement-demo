@@ -8,7 +8,7 @@ export default function InjonctionGenerator({ dossier }) {
   const handleDownloadPDF = () => {
     const doc = new jsPDF();
     doc.text(
-Requete en injonction de payer
+`Requete en injonction de payer
 Tribunal: ${tribunal}
 
 Demandeur:
@@ -29,8 +29,7 @@ Pieces jointes:
 ${pieces.join(", ")}
 
 Fait a [ville], le ${new Date().toLocaleDateString("fr-FR")}
-[Signature]`
-    , 10, 10);
+[Signature]`, 10, 10);
     doc.save("Injonction_de_payer.pdf");
   };
   return (
