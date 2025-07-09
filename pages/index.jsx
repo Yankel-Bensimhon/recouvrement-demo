@@ -7,18 +7,16 @@ import AvantagesAvocat from "../components/AvantagesAvocat";
 import MiseEnDemeureGenerator from "../components/MiseEnDemeureGenerator";
 import Footer from "../components/Footer";
 
-export default function Home() {
+export default function HomePage() {
   return (
     <>
       <Navbar />
       <HeroSection />
       <AccueilActions />
-      <TimeLineRecouvrement />
+      <TimelineRecouvrement />
       <LegalModes />
       <AvantagesAvocat />
-      <section id="med">
-        <MiseEnDemeureGenerator />
-      </section>
+      <MiseEnDemeureGenerator />
       <Footer />
     </>
   );
