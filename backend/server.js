@@ -1,13 +1,15 @@
 const express = require('express');
 const dotenv = require('dotenv');
-const db = require('./db'); // We'll create this db connection file next
+const db = require('./db');
+const cookieParser = require('cookie-parser'); // Import cookie-parser
 
-dotenv.config();
+dotenv.config({ path: __dirname + '/../.env' }); // Load .env from root for NEXTAUTH_SECRET
 
 const app = express();
 const port = process.env.PORT || 3001;
 
 app.use(express.json()); // Middleware to parse JSON bodies
+app.use(cookieParser()); // Middleware to parse cookies
 
 // Basic route
 app.get('/', (req, res) => {
@@ -16,7 +18,11 @@ app.get('/', (req, res) => {
 
 // API routes
 const claimRoutes = require('./routes/claims');
-app.use('/api/claims', claimRoutes);
+const authRoutes = require('./routes/auth');
+
+app.use('/api/claims', claimRoutes); // Will be protected later
+app.use('/api/auth', authRoutes); // Auth routes (signup, login for NextAuth)
+
 // Add other routes here later (e.g., for users, documents)
 
 app.listen(port, () => {

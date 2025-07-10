@@ -1,12 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
+const verifyToken = require('../middleware/authMiddleware'); // Import the middleware
 
-// GET /api/claims - Get all claims (will be user-specific later)
-router.get('/', async (req, res) => {
+// GET /api/claims - Get all claims for the authenticated user
+router.get('/', verifyToken, async (req, res) => {
   try {
-    // For now, fetching all claims. Later, this should be filtered by user_id
-    const { rows } = await db.query('SELECT * FROM claims ORDER BY created_at DESC');
+    const userId = req.user.id; // Extracted from token by middleware
+    const { rows } = await db.query('SELECT * FROM claims WHERE user_id = $1 ORDER BY created_at DESC', [userId]);
     res.json(rows);
   } catch (err) {
     console.error(err.message);
@@ -14,8 +15,8 @@ router.get('/', async (req, res) => {
   }
 });
 
-// POST /api/claims - Create a new claim
-router.post('/', async (req, res) => {
+// POST /api/claims - Create a new claim for the authenticated user
+router.post('/', verifyToken, async (req, res) => {
   const {
     debtor_name,
     debtor_email,
@@ -25,43 +26,44 @@ router.post('/', async (req, res) => {
     status = 'nouveau', // Default status
     invoice_reference,
     description,
-    // user_id will come from authenticated user session later
   } = req.body;
+
+  const userId = req.user.id; // Extracted from token by middleware
 
   // Basic validation
   if (!debtor_name || !claim_amount) {
     return res.status(400).json({ msg: 'Please include debtor name and claim amount' });
   }
+  if (!userId) {
+    return res.status(400).json({ msg: 'User ID is missing. Ensure you are authenticated.'});
+  }
 
   try {
-    // In a real app, user_id would be extracted from an auth token or session
-    const temp_user_id = 1; // Placeholder for now, assuming a user with id=1 exists
-
     const newClaim = await db.query(
       `INSERT INTO claims (user_id, debtor_name, debtor_email, debtor_address, claim_amount, due_date, status, invoice_reference, description)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING *`,
-      [temp_user_id, debtor_name, debtor_email, debtor_address, claim_amount, due_date, status, invoice_reference, description]
+      [userId, debtor_name, debtor_email, debtor_address, claim_amount, due_date, status, invoice_reference, description]
     );
     res.status(201).json(newClaim.rows[0]);
   } catch (err) {
     console.error(err.message);
-    // Check for specific DB errors, e.g., foreign key violation if user_id doesn't exist
-    if (err.code === '23503') { // Foreign key violation
-        return res.status(400).json({ msg: 'Invalid user_id or other foreign key constraint failed.' });
+    if (err.code === '23503') { // Foreign key violation (e.g. user_id doesn't exist)
+        return res.status(400).json({ msg: 'Error creating claim due to invalid reference (e.g., user ID).' });
     }
     res.status(500).send('Server error');
   }
 });
 
-// GET /api/claims/:id - Get a single claim by ID
-router.get('/:id', async (req, res) => {
+// GET /api/claims/:id - Get a single claim by ID, ensuring it belongs to the authenticated user
+router.get('/:id', verifyToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const { rows } = await db.query('SELECT * FROM claims WHERE id = $1', [id]);
+    const userId = req.user.id;
+    const { rows } = await db.query('SELECT * FROM claims WHERE id = $1 AND user_id = $2', [id, userId]);
 
     if (rows.length === 0) {
-      return res.status(404).json({ msg: 'Claim not found' });
+      return res.status(404).json({ msg: 'Claim not found or access denied' });
     }
     res.json(rows[0]);
   } catch (err) {
@@ -70,10 +72,11 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// PUT /api/claims/:id - Update a claim
-router.put('/:id', async (req, res) => {
+// PUT /api/claims/:id - Update a claim, ensuring it belongs to the authenticated user
+router.put('/:id', verifyToken, async (req, res) => {
   try {
     const { id } = req.params;
+    const userId = req.user.id;
     const {
       debtor_name,
       debtor_email,
@@ -85,10 +88,10 @@ router.put('/:id', async (req, res) => {
       description,
     } = req.body;
 
-    // Fetch current claim to ensure it exists and for partial updates
-    const currentClaimResult = await db.query('SELECT * FROM claims WHERE id = $1', [id]);
+    // Fetch current claim to ensure it exists and belongs to the user
+    const currentClaimResult = await db.query('SELECT * FROM claims WHERE id = $1 AND user_id = $2', [id, userId]);
     if (currentClaimResult.rows.length === 0) {
-      return res.status(404).json({ msg: 'Claim not found' });
+      return res.status(404).json({ msg: 'Claim not found or access denied' });
     }
     const currentClaim = currentClaimResult.rows[0];
 
@@ -104,7 +107,7 @@ router.put('/:id', async (req, res) => {
          invoice_reference = $7,
          description = $8,
          updated_at = NOW()
-       WHERE id = $9
+       WHERE id = $9 AND user_id = $10
        RETURNING *`,
       [
         debtor_name !== undefined ? debtor_name : currentClaim.debtor_name,
@@ -115,7 +118,8 @@ router.put('/:id', async (req, res) => {
         status !== undefined ? status : currentClaim.status,
         invoice_reference !== undefined ? invoice_reference : currentClaim.invoice_reference,
         description !== undefined ? description : currentClaim.description,
-        id
+         id,
+         userId // for the WHERE clause
       ]
     );
     res.json(updatedClaim.rows[0]);
@@ -125,14 +129,15 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// DELETE /api/claims/:id - Delete a claim
-router.delete('/:id', async (req, res) => {
+// DELETE /api/claims/:id - Delete a claim, ensuring it belongs to the authenticated user
+router.delete('/:id', verifyToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const deleteOp = await db.query('DELETE FROM claims WHERE id = $1 RETURNING *', [id]);
+    const userId = req.user.id;
+    const deleteOp = await db.query('DELETE FROM claims WHERE id = $1 AND user_id = $2 RETURNING *', [id, userId]);
 
     if (deleteOp.rowCount === 0) {
-      return res.status(404).json({ msg: 'Claim not found' });
+      return res.status(404).json({ msg: 'Claim not found or access denied' });
     }
     res.json({ msg: 'Claim deleted', deletedClaim: deleteOp.rows[0] });
   } catch (err) {

@@ -42,29 +42,84 @@ export default function DashboardLayout() {
     description: "",
   });
 
+import { useSession, getSession } from 'next-auth/react'; // Import useSession
+
+export default function DashboardLayout() {
+  const { data: session, status } = useSession(); // Get session state
+  const [dossiers, setDossiers] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // State for new claim form
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newClaim, setNewClaim] = useState({
+    debtor_name: "",
+    claim_amount: "",
+    due_date: "",
+    debtor_email: "",
+    debtor_address: "",
+    invoice_reference: "",
+    description: "",
+  });
+
   useEffect(() => {
     const fetchDossiers = async () => {
-      try {
-        setIsLoading(true);
-        const response = await fetch("/api/claims"); // Assuming Next.js proxy or direct API route
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+      if (status === "authenticated") { // Only fetch if authenticated
+        try {
+          setIsLoading(true);
+          // To send the token, NextAuth's `fetch` wrapper is not strictly necessary if using `getSession`
+          // to get the token and manually adding it. Or, rely on cookie-based session if applicable.
+          // For JWTs, you'd typically get the token and add it to Authorization header.
+          // The simple `fetch` here relies on the browser sending the NextAuth session cookie.
+          // If backend expects JWT in header, this needs adjustment.
+
+          // Let's assume for now the proxy and NextAuth handle cookie forwarding,
+          // or the backend middleware is adapted for NextAuth's session cookie if not using Bearer token.
+          // For a robust JWT approach, you'd do:
+          // const sessionData = await getSession(); // Get full session with token
+          // const token = sessionData?.accessToken; // Or whatever your token is named
+          // headers: { 'Authorization': `Bearer ${token}` }
+
+          // No longer need to manually add Authorization header if relying on cookie-based auth
+          // The browser will send the cookie automatically.
+          // const sessionWithToken = await getSession();
+          // let headers = { "Content-Type": "application/json" };
+          // if (sessionWithToken?.jwt) {
+          //   headers['Authorization'] = `Bearer ${sessionWithToken.jwt}`;
+          // } else if (session?.accessToken) {
+          //    headers['Authorization'] = `Bearer ${session.accessToken}`;
+          // }
+
+          const response = await fetch("/api/claims"); // No custom headers needed for cookie auth by default
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ message: "Erreur inconnue ou réponse non JSON" }));
+            if (response.status === 401) {
+               setError(errorData.message || "Non autorisé à charger les dossiers. Veuillez vous reconnecter.");
+            } else {
+              setError(errorData.message || `Erreur HTTP : ${response.status}`);
+            }
+            setDossiers([]); // Clear dossiers on auth error
+            return;
+          }
+          const data = await response.json();
+          setDossiers(data);
+          setError(null);
+        } catch (e) {
+          console.error("Failed to fetch dossiers:", e);
+          setError(e.message);
+        } finally {
+          setIsLoading(false);
         }
-        const data = await response.json();
-        setDossiers(data);
-        setError(null);
-      } catch (e) {
-        console.error("Failed to fetch dossiers:", e);
-        setError(e.message);
-        // Keep DOSSIERS_FAKE for fallback if API fails in dev and no DB is up
-        // setDossiers(DOSSIERS_FAKE);
-      } finally {
+      } else if (status === "unauthenticated") {
         setIsLoading(false);
+        setError("Vous devez être connecté pour voir les dossiers.");
+        setDossiers([]);
       }
+      // If status is 'loading', we wait.
     };
 
     fetchDossiers();
-  }, []);
+  }, [status]); // Re-run if session status changes
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -76,23 +131,41 @@ export default function DashboardLayout() {
 
   const handleAddDossier = async (e) => {
     e.preventDefault();
+    if (status !== "authenticated") {
+      setError("Vous devez être connecté pour ajouter un dossier.");
+      return;
+    }
     try {
+      // Similar to fetchDossiers, ensure token is sent if backend expects Bearer token.
+      // For now, relying on session cookie.
+      // No longer need to manually add Authorization header if relying on cookie-based auth
+      // const sessionWithToken = await getSession();
+      // let headers = { "Content-Type": "application/json" };
+      // if (sessionWithToken?.jwt) {
+      //   headers['Authorization'] = `Bearer ${sessionWithToken.jwt}`;
+      // } else if (session?.accessToken) {
+      //   headers['Authorization'] = `Bearer ${session.accessToken}`;
+      // }
+
       const response = await fetch("/api/claims", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" }, // Standard header
         body: JSON.stringify({
           ...newClaim,
           claim_amount: parseFloat(newClaim.claim_amount) // Ensure amount is a number
         }),
       });
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.msg || `HTTP error! status: ${response.status}`);
+        const errorData = await response.json().catch(() => ({ message: "Erreur inconnue ou réponse non JSON" }));
+         if (response.status === 401) {
+            setError(errorData.message || "Non autorisé à ajouter le dossier.");
+        } else {
+            setError(errorData.message || `Erreur HTTP : ${response.status}`);
+        }
+        return;
       }
       const addedClaim = await response.json();
-      setDossiers(prevDossiers => [addedClaim, ...prevDossiers]);
+      setDossiers(prevDossiers => [addedClaim, ...prevDossiers]); // Add to start of list
       setShowAddForm(false);
       setNewClaim({ // Reset form
         debtor_name: "",
