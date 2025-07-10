@@ -19,11 +19,12 @@ app.get('/', (req, res) => {
 // API routes
 const claimRoutes = require('./routes/claims');
 const authRoutes = require('./routes/auth');
+const documentRoutes = require('./routes/documents');
 
-app.use('/api/claims', claimRoutes); // Will be protected later
-app.use('/api/auth', authRoutes); // Auth routes (signup, login for NextAuth)
+app.use('/api/claims', claimRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/documents', documentRoutes);
 
-// Add other routes here later (e.g., for users, documents)
 
 app.listen(port, () => {
   console.log(`Server listening at http://localhost:${port}`);

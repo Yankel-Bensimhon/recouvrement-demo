@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useSession } from 'next-auth/react';
-import EditClaimModal from './EditClaimModal'; // Import the modal
+import EditClaimModal from './EditClaimModal';
+import GenerateDocumentModal from './GenerateDocumentModal'; // Import the new modal
 
 const STATUTS = {
   nouveau: { label: "Nouveau", color: "bg-blue-200 text-blue-800" },
@@ -38,6 +39,10 @@ export default function DashboardLayout() {
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [currentClaimToEdit, setCurrentClaimToEdit] = useState(null);
+
+  // State for generating document
+  const [isGenerateDocModalOpen, setIsGenerateDocModalOpen] = useState(false);
+  const [currentClaimForDoc, setCurrentClaimForDoc] = useState(null);
 
   useEffect(() => {
     const fetchDossiers = async () => {
@@ -131,6 +136,23 @@ export default function DashboardLayout() {
       console.error("Failed to delete claim:", err);
       setError(`Erreur lors de la suppression: ${err.message}`);
     }
+  };
+
+  const handleOpenGenerateDocModal = (claim) => {
+    setCurrentClaimForDoc(claim);
+    setIsGenerateDocModalOpen(true);
+    setError(null);
+  };
+
+  const handleCloseGenerateDocModal = () => {
+    setIsGenerateDocModalOpen(false);
+    setCurrentClaimForDoc(null);
+  };
+
+  const handleDocumentGenerated = (updatedClaimWithNewStatus) => {
+    // This function is called from GenerateDocumentModal after doc is saved and claim status updated
+    setDossiers(dossiers.map(d => d.id === updatedClaimWithNewStatus.id ? updatedClaimWithNewStatus : d));
+    // Potentially show a success message for document generation + status update
   };
 
   if (authStatus === "loading" || (isLoading && authStatus === "authenticated")) {
@@ -267,6 +289,7 @@ export default function DashboardLayout() {
                 <td className="px-5 py-4 whitespace-nowrap text-sm text-gray-600">{formatDate(dossier.created_at)}</td>
                 <td className="px-5 py-4 whitespace-nowrap text-sm text-gray-500 truncate max-w-xs">{dossier.invoice_reference}</td>
                 <td className="px-5 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                  <button onClick={() => handleOpenGenerateDocModal(dossier)} className="text-green-600 hover:text-green-800 transition-colors duration-150">Générer Doc.</button>
                   <button onClick={() => handleOpenEditModal(dossier)} className="text-blue-600 hover:text-blue-800 transition-colors duration-150">Modifier</button>
                   <button onClick={() => handleDeleteClaim(dossier.id)} className="text-red-600 hover:text-red-800 transition-colors duration-150">Supprimer</button>
                 </td>
@@ -289,12 +312,25 @@ export default function DashboardLayout() {
           </tbody>
         </table>
       </div>
-       {isEditModalOpen && currentClaimToEdit && (
+
+      {/* Edit Claim Modal */}
+      {isEditModalOpen && currentClaimToEdit && (
         <EditClaimModal
           claim={currentClaimToEdit}
           isOpen={isEditModalOpen}
           onClose={handleCloseEditModal}
           onSave={handleSaveClaim}
+        />
+      )}
+
+      {/* Generate Document Modal */}
+      {isGenerateDocModalOpen && currentClaimForDoc && (
+        <GenerateDocumentModal
+          claim={currentClaimForDoc}
+          user={session?.user} // Pass user from session
+          isOpen={isGenerateDocModalOpen}
+          onClose={handleCloseGenerateDocModal}
+          onDocumentGenerated={handleDocumentGenerated}
         />
       )}
     </div>
