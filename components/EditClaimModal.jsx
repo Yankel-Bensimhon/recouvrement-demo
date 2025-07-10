@@ -4,15 +4,49 @@ export default function EditClaimModal({ claim, isOpen, onClose, onSave }) {
   const [formData, setFormData] = useState({});
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [associatedDocuments, setAssociatedDocuments] = useState([]);
+  const [isLoadingDocs, setIsLoadingDocs] = useState(false);
+  const [docError, setDocError] = useState(null);
+
 
   useEffect(() => {
     if (claim) {
-      // Format date for input type="date" if due_date exists
       const formattedClaim = { ...claim };
       if (claim.due_date) {
         formattedClaim.due_date = new Date(claim.due_date).toISOString().split('T')[0];
       }
       setFormData(formattedClaim);
+
+      // Fetch associated documents when the modal opens and a claim is available
+      const fetchDocuments = async () => {
+        if (claim.id) {
+          setIsLoadingDocs(true);
+          setDocError(null);
+          try {
+            const response = await fetch(`/api/documents?claim_id=${claim.id}`);
+            if (!response.ok) {
+              const errData = await response.json();
+              throw new Error(errData.message || `Erreur HTTP: ${response.status}`);
+            }
+            const docs = await response.json();
+            setAssociatedDocuments(docs);
+          } catch (err) {
+            console.error("Failed to fetch documents:", err);
+            setDocError(err.message);
+            setAssociatedDocuments([]);
+          } finally {
+            setIsLoadingDocs(false);
+          }
+        }
+      };
+
+      if (isOpen) { // Fetch documents only when modal is open
+        fetchDocuments();
+      } else { // Clear documents when modal is closed
+        setAssociatedDocuments([]);
+        setDocError(null);
+      }
+
     } else {
       setFormData({
         debtor_name: '',
@@ -139,7 +173,35 @@ export default function EditClaimModal({ claim, isOpen, onClose, onSave }) {
                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
           </div>
 
-          <div className="flex items-center justify-end space-x-4 pt-2">
+          {/* Associated Documents Section */}
+          <div className="pt-4 mt-6 border-t border-gray-200">
+            <h3 className="text-lg font-medium text-gray-700 mb-3">Documents Associés</h3>
+            {isLoadingDocs && <p className="text-sm text-gray-500">Chargement des documents...</p>}
+            {docError && <p className="text-sm text-red-500">Erreur documents: {docError}</p>}
+            {!isLoadingDocs && !docError && associatedDocuments.length === 0 && (
+              <p className="text-sm text-gray-500">Aucun document associé à cette créance pour le moment.</p>
+            )}
+            {!isLoadingDocs && !docError && associatedDocuments.length > 0 && (
+              <ul className="space-y-2 max-h-40 overflow-y-auto">
+                {associatedDocuments.map(doc => (
+                  <li key={doc.id} className="p-2 border border-gray-200 rounded-md bg-gray-50 text-sm">
+                    <span className="font-medium text-gray-700">
+                      {doc.document_type === 'mise_en_demeure' ? 'Mise en Demeure' :
+                       doc.document_type === 'injonction_de_payer' ? 'Injonction de Payer' :
+                       doc.document_type}
+                    </span>
+                    <span className="text-gray-500 ml-2">
+                      (Généré le: {new Date(doc.generated_at).toLocaleDateString('fr-FR')})
+                    </span>
+                    {/* Future: Link to view/download if PDF is stored */}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+
+          <div className="flex items-center justify-end space-x-4 pt-6 border-t border-gray-200 mt-6">
             <button type="button" onClick={onClose}
                     className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg shadow-sm transition duration-150">
               Annuler
