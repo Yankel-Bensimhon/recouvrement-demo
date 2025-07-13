@@ -72,13 +72,28 @@ INSERT INTO users (id, email, password_hash, company_name)
 VALUES (1, 'test@example.com', 'hashed_password_example_not_real', 'Test Company Inc.')
 ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email, password_hash = EXCLUDED.password_hash, company_name = EXCLUDED.company_name;
 
+INSERT INTO users (id, email, password_hash, company_name)
+VALUES (2, 'yankel1234@hotmail.com', '$2a$10$pTsGrDWZv5zwuMDN0LMFfevvZKvYX3ySUBITYaYa7tKqjVaiQ398q', 'Yesod')
+ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email, password_hash = EXCLUDED.password_hash, company_name = EXCLUDED.company_name;
+
+-- Add recovered_amount to claims table
+ALTER TABLE claims ADD COLUMN IF NOT EXISTS recovered_amount NUMERIC(10, 2) DEFAULT 0.00;
+
 -- Initial dummy claim (for testing purposes, linked to user_id = 1)
-INSERT INTO claims (user_id, debtor_name, debtor_email, claim_amount, due_date, status, invoice_reference, description)
+INSERT INTO claims (user_id, debtor_name, debtor_email, claim_amount, due_date, status, invoice_reference, description, recovered_amount)
 VALUES
-(1, 'SARL Debiteur Alpha', 'alpha@example.com', 1250.50, '2024-07-15', 'nouveau', 'INV001', 'Facture non réglée pour services de consultation'),
-(1, 'Entreprise Beta Services', 'contact@beta.fr', 875.00, '2024-08-01', 'mise_en_demeure', 'INV002', 'Matériel livré non payé'),
-(1, 'M. Charles Gamma', 'charles.gamma@email.com', 2300.25, '2024-06-30', 'injonction', 'CONTRAT003', 'Prêt personnel non remboursé')
-ON CONFLICT DO NOTHING;
+(1, 'SARL Debiteur Alpha', 'alpha@example.com', 1250.50, '2024-07-15', 'nouveau', 'INV001', 'Facture non réglée pour services de consultation', 0.00),
+(1, 'Entreprise Beta Services', 'contact@beta.fr', 875.00, '2024-08-01', 'mise_en_demeure', 'INV002', 'Matériel livré non payé', 100.00),
+(1, 'M. Charles Gamma', 'charles.gamma@email.com', 2300.25, '2024-06-30', 'injonction', 'CONTRAT003', 'Prêt personnel non remboursé', 500.00)
+ON CONFLICT (id) DO UPDATE SET
+    debtor_name = EXCLUDED.debtor_name,
+    debtor_email = EXCLUDED.debtor_email,
+    claim_amount = EXCLUDED.claim_amount,
+    due_date = EXCLUDED.due_date,
+    status = EXCLUDED.status,
+    invoice_reference = EXCLUDED.invoice_reference,
+    description = EXCLUDED.description,
+    recovered_amount = EXCLUDED.recovered_amount;
 
 /*
 Notes on schema:

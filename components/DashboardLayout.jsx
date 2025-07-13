@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useSession } from 'next-auth/react';
 import EditClaimModal from './EditClaimModal';
 import GenerateDocumentModal from './GenerateDocumentModal'; // Import the new modal
+import ClaimsStatusPieChart from './ClaimsStatusPieChart';
 
 const STATUTS = {
   nouveau: { label: "Nouveau", color: "bg-blue-200 text-blue-800" },
@@ -35,6 +36,7 @@ export default function DashboardLayout() {
   const [newClaim, setNewClaim] = useState({
     debtor_name: "", claim_amount: "", due_date: "", debtor_email: "",
     debtor_address: "", invoice_reference: "", description: "", status: "nouveau",
+    recovered_amount: "",
   });
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -89,7 +91,7 @@ export default function DashboardLayout() {
       const response = await fetch("/api/claims", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...newClaim, claim_amount: parseFloat(newClaim.claim_amount) }),
+        body: JSON.stringify({ ...newClaim, claim_amount: parseFloat(newClaim.claim_amount), recovered_amount: parseFloat(newClaim.recovered_amount || 0) }),
       });
       const responseData = await response.json();
       if (!response.ok) {
@@ -97,7 +99,7 @@ export default function DashboardLayout() {
       }
       setDossiers(prevDossiers => [responseData, ...prevDossiers]);
       setShowAddForm(false);
-      setNewClaim({ debtor_name: "", claim_amount: "", due_date: "", debtor_email: "", debtor_address: "", invoice_reference: "", description: "", status: "nouveau" });
+      setNewClaim({ debtor_name: "", claim_amount: "", due_date: "", debtor_email: "", debtor_address: "", invoice_reference: "", description: "", status: "nouveau", recovered_amount: "" });
     } catch (err) {
       console.error("Failed to add dossier:", err);
       setError(`Erreur lors de l'ajout: ${err.message}`);
@@ -170,29 +172,36 @@ export default function DashboardLayout() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {/* Summary Cards */}
-        <div className="bg-blue-50 rounded-xl p-4 text-center shadow-lg">
-          <div className="text-2xl font-bold text-blue-700">{dossiers.length}</div>
-          <div className="text-sm text-gray-600">Dossiers Actifs</div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        {/* Pie Chart taking 1/3 of the space */}
+        <div className="lg:col-span-1">
+          <ClaimsStatusPieChart claims={dossiers} />
         </div>
-        <div className="bg-green-50 rounded-xl p-4 text-center shadow-lg">
-          <div className="text-2xl font-bold text-green-700">
-            {formatEuro(dossiers.reduce((acc, d) => acc + parseFloat(d.claim_amount || 0), 0))}
+
+        {/* Summary Cards taking 2/3 of the space */}
+        <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <div className="bg-blue-50 rounded-xl p-5 text-center shadow-lg flex flex-col justify-center">
+            <div className="text-3xl font-bold text-blue-700">{dossiers.length}</div>
+            <div className="text-sm text-gray-600 mt-1">Dossiers Actifs</div>
           </div>
-          <div className="text-sm text-gray-600">Montant Total Dû</div>
-        </div>
-        <div className="bg-yellow-50 rounded-xl p-4 text-center shadow-lg">
-          <div className="text-2xl font-bold text-yellow-700">
-            {dossiers.filter(d => d.status === "mise_en_demeure").length}
+          <div className="bg-green-50 rounded-xl p-5 text-center shadow-lg flex flex-col justify-center">
+            <div className="text-3xl font-bold text-green-700">
+              {formatEuro(dossiers.reduce((acc, d) => acc + parseFloat(d.recovered_amount || 0), 0))}
+            </div>
+            <div className="text-sm text-gray-600 mt-1">Montant Total Recouvré</div>
           </div>
-          <div className="text-sm text-gray-600">Mises en Demeure</div>
-        </div>
-        <div className="bg-purple-50 rounded-xl p-4 text-center shadow-lg">
-          <div className="text-2xl font-bold text-purple-700">
-            {dossiers.filter(d => d.status === "injonction").length}
+          <div className="bg-red-50 rounded-xl p-5 text-center shadow-lg flex flex-col justify-center">
+            <div className="text-3xl font-bold text-red-700">
+              {formatEuro(dossiers.reduce((acc, d) => acc + parseFloat(d.claim_amount || 0), 0) - dossiers.reduce((acc, d) => acc + parseFloat(d.recovered_amount || 0), 0))}
+            </div>
+            <div className="text-sm text-gray-600 mt-1">Montant Restant Dû</div>
           </div>
-          <div className="text-sm text-gray-600">Injonctions</div>
+          <div className="bg-yellow-50 rounded-xl p-5 text-center shadow-lg flex flex-col justify-center">
+            <div className="text-3xl font-bold text-yellow-700">
+              {dossiers.filter(d => d.status === "mise_en_demeure").length}
+            </div>
+            <div className="text-sm text-gray-600 mt-1">Mises en Demeure</div>
+          </div>
         </div>
       </div>
 
@@ -218,8 +227,12 @@ export default function DashboardLayout() {
               <input type="text" name="debtor_name" id="debtor_name" value={newClaim.debtor_name} onChange={handleInputChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
             </div>
             <div>
-              <label htmlFor="claim_amount" className="block text-sm font-medium text-gray-700">Montant (€) *</label>
+              <label htmlFor="claim_amount" className="block text-sm font-medium text-gray-700">Montant Dû (€) *</label>
               <input type="number" name="claim_amount" id="claim_amount" value={newClaim.claim_amount} onChange={handleInputChange} required step="0.01" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
+            </div>
+            <div>
+              <label htmlFor="recovered_amount" className="block text-sm font-medium text-gray-700">Montant Recouvré (€)</label>
+              <input type="number" name="recovered_amount" id="recovered_amount" value={newClaim.recovered_amount} onChange={handleInputChange} step="0.01" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
             </div>
             <div>
               <label htmlFor="due_date" className="block text-sm font-medium text-gray-700">Date d'échéance</label>

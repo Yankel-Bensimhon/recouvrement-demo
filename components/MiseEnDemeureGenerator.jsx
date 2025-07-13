@@ -1,124 +1,285 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { jsPDF } from "jspdf";
+import Autocomplete from "react-google-autocomplete";
 
-export default function MiseEnDemeureGenerator() {
-  const [form, setForm] = useState({
-    societeC: "",
-    adresseC: "",
-    codePostalC: "",
-    villeC: "",
-    societeD: "",
-    adresseD: "",
-    codePostalD: "",
-    villeD: "",
-    representantD: "",
-    fonctionD: "",
+// Helper to format date strings
+const formatDate = (dateString) => {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  return new Intl.DateTimeFormat('fr-FR').format(date);
+};
+
+export default function MiseEnDemeureGenerator({ claim, user, onGenerationComplete }) {
+  // The form now holds data that can be edited before generating the PDF.
+  // It's pre-filled from the claim and user objects.
+  const [apiKey, setApiKey] = useState("");
+  const [formData, setFormData] = useState({
+    creditorName: '',
+    creditorStreet: '',
+    creditorZip: '',
+    creditorCity: '',
+    debtorName: '',
+    debtorStreet: '',
+    debtorZip: '',
+    debtorCity: '',
+    invoiceReference: '',
+    dueDate: '',
+    claimAmount: 0,
     factures: [{ numero: "", date: "", montant: "" }],
+    // Add any other fields you might need from the claim
   });
 
-  const total = form.factures.reduce((sum, f) => sum + (parseFloat(f.montant) || 0), 0);
+  useEffect(() => {
+    fetch('/api/config/google-api-key')
+      .then(res => res.json())
+      .then(data => {
+        console.log("API Key data:", data);
+        setApiKey(data.apiKey);
+      });
+  }, []);
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+  // When the component mounts or the claim/user props change, update the form state.
+  useEffect(() => {
+    if (claim && user) {
+        const debtorAddressParts = (claim.debtor_address || '').split(', ');
+      setFormData({
+        creditorName: user.company_name || 'Votre Société', // Fallback name
+        creditorStreet: 'Votre Rue',
+        creditorZip: '75000',
+        creditorCity: 'Paris',
+        debtorName: claim.debtor_name || '',
+        debtorStreet: debtorAddressParts[0] || '',
+        debtorZip: debtorAddressParts[1] || '',
+        debtorCity: debtorAddressParts[2] || '',
+        invoiceReference: claim.invoice_reference || '',
+        dueDate: claim.due_date || '',
+        claimAmount: claim.claim_amount || 0,
+        factures: [{ numero: "", date: "", montant: "" }],
+      });
+    }
+  }, [claim, user]);
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleFactureChange = (i, e) => {
-    const newFactures = [...form.factures];
+    const newFactures = [...formData.factures];
     newFactures[i][e.target.name] = e.target.value;
-    setForm({ ...form, factures: newFactures });
+    setFormData({ ...formData, factures: newFactures });
   };
 
   const addFacture = () => {
-    setForm({ ...form, factures: [...form.factures, { numero: "", date: "", montant: "" }] });
+    setFormData({ ...formData, factures: [...formData.factures, { numero: "", date: "", montant: "" }] });
   };
 
-  const generatePDF = () => {
+  const [errors, setErrors] = useState({});
+
+  const validateForm = () => {
+    const newErrors = {};
+    if (!formData.creditorName) newErrors.creditorName = "Le nom du créancier est requis.";
+    if (!formData.creditorStreet) newErrors.creditorStreet = "La rue du créancier est requise.";
+    if (!formData.creditorZip) newErrors.creditorZip = "Le code postal du créancier est requis.";
+    if (!formData.creditorCity) newErrors.creditorCity = "La ville du créancier est requise.";
+    if (!formData.debtorName) newErrors.debtorName = "Le nom du débiteur est requis.";
+    if (!formData.debtorStreet) newErrors.debtorStreet = "La rue du débiteur est requise.";
+    if (!formData.debtorZip) newErrors.debtorZip = "Le code postal du débiteur est requis.";
+    if (!formData.debtorCity) newErrors.debtorCity = "La ville du débiteur est requise.";
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const generateAndSavePDF = () => {
+    if (!validateForm()) {
+      return;
+    }
     const doc = new jsPDF();
-    let y = 20;
-    doc.setFont("helvetica", "bold").setFontSize(14);
-    doc.text("MISE EN DEMEURE AVANT POURSUITES", 10, y);
-    y += 12;
-    doc.setFont("helvetica", "normal").setFontSize(11);
-    doc.text(`Créancier : ${form.societeC}`, 10, y); y += 8;
-    doc.text(`Adresse : ${form.adresseC}, ${form.codePostalC} ${form.villeC}`, 10, y); y += 8;
-    doc.text(`Débiteur : ${form.societeD}`, 10, y); y += 8;
-    doc.text(`Adresse : ${form.adresseD}, ${form.codePostalD} ${form.villeD}`, 10, y); y += 8;
-    doc.text(`Représentant légal : ${form.representantD} (${form.fonctionD})`, 10, y); y += 10;
-
     const today = new Date().toLocaleDateString("fr-FR");
-    doc.text(`Paris, le ${today}`, 10, y); y += 12;
+    let y = 20;
 
+    // --- PDF Content ---
+    doc.setFont("helvetica", "bold").setFontSize(14);
+    doc.text("MISE EN DEMEURE AVANT POURSUITES", 105, y, { align: 'center' });
+    y += 15;
+
+    // Creditor and Debtor Info
+    doc.setFont("helvetica", "bold").setFontSize(11);
+    doc.text("Créancier", 10, y);
+    doc.text("Débiteur", 110, y);
+    doc.setFont("helvetica", "normal");
+    y += 6;
+    doc.text(formData.creditorName, 10, y);
+    doc.text(formData.debtorName, 110, y);
+    y += 6;
+    doc.text(`${formData.creditorStreet}, ${formData.creditorZip} ${formData.creditorCity}`, 10, y);
+    doc.text(`${formData.debtorStreet}, ${formData.debtorZip} ${formData.debtorCity}`, 110, y, { maxWidth: 90 });
+    y += 15;
+
+    // Letter Details
+    doc.text(`Paris, le ${today}`, 150, y);
+    y += 12;
     doc.setFont("helvetica", "bold").setFontSize(12);
-    doc.text("Objet : Mise en demeure de payer", 10, y); y += 10;
+    doc.text("Objet : Mise en demeure de payer", 10, y);
+    y += 10;
     doc.setFont("helvetica", "normal").setFontSize(11);
     doc.text(
-      "Je vous informe que vous restez redevable envers notre client des sommes suivantes au titre des factures impayées ci-dessous :",
-      10, y, { maxWidth: 180 }
+      `Madame, Monsieur,`,
+      10, y
     );
-    y += 14;
+    y += 10;
+    doc.text(
+      `Sauf erreur ou omission de notre part, nous constatons que la créance référencée ci-dessous, arrivée à échéance, reste à ce jour impayée:`,
+      10, y, { maxWidth: 190 }
+    );
+    y += 12;
 
-    // Factures
-    form.factures.forEach((f, i) => {
+    // Invoice Details
+    doc.setFont("helvetica", "bold");
+    formData.factures.forEach((f, i) => {
       if (!f.numero) return;
       doc.text(
         `• Facture n°${f.numero} du ${f.date} - Montant TTC : ${f.montant} €`,
-        10,
+        15,
         y
       );
       y += 8;
     });
+    const total = formData.factures.reduce((sum, f) => sum + (parseFloat(f.montant) || 0), 0);
+    doc.text(`Total dû : ${total.toFixed(2)} €`, 15, y);
+    y += 12;
 
-    y += 5;
-    doc.setFont("helvetica", "bold");
-    doc.text(`Total dû : ${total.toFixed(2)} €`, 10, y); y += 10;
     doc.setFont("helvetica", "normal");
     doc.text(
-      `Malgré nos relances amiables, la somme reste impayée à ce jour. Nous vous mettons en demeure de régler le montant total sous 8 jours à réception de la présente, faute de quoi des poursuites judiciaires pourront être engagées sans autre avis.`,
-      10,
-      y,
-      { maxWidth: 180 }
+      `En conséquence, nous vous mettons en demeure de nous régler la somme de ${parseFloat(formData.claimAmount).toLocaleString("fr-FR", { style: "currency", currency: "EUR" })} sous un délai de 8 (huit) jours à compter de la réception de la présente.`,
+      10, y, { maxWidth: 190 }
+    );
+    y += 12;
+    doc.text(
+        `À défaut de paiement dans ce délai, nous serons contraints d'engager une procédure judiciaire à votre encontre, ce qui entraînerait des frais supplémentaires à votre charge.`,
+      10, y, { maxWidth: 190 }
+    );
+    y += 12;
+    doc.text(
+      "Cette mise en demeure vaut comme dernier avis amiable avant le lancement de poursuites.",
+      10, y, { maxWidth: 190 }
     );
     y += 20;
+
     doc.text(
       "Nous vous prions d’agréer, Madame, Monsieur, l’expression de nos salutations distinguées.",
-      10,
-      y
+      10, y
     );
-    y += 14;
+    y += 20;
     doc.setFont("helvetica", "bold");
-    doc.text("Yesod - Opéré par le cabinet d’avocat Yankel Bensimhon", 10, y);
-    y += 8;
-    doc.setFont("helvetica", "italic");
-    doc.text("Avocat au Barreau de Paris, 43 avenue Foch, 75116 Paris", 10, y);
+    doc.text(formData.creditorName, 150, y);
 
-    doc.save(`Mise_en_demeure_${form.societeD.replace(/\s+/g, '_')}.pdf`);
+    // --- Save and Callback ---
+    // Save the PDF to be downloaded by the user
+    doc.save(`Mise_en_demeure_${formData.debtorName.replace(/\s+/g, '_')}.pdf`);
+
+    // Call the callback function to notify the parent modal
+    if (onGenerationComplete) {
+      onGenerationComplete({
+        claimId: claim.id,
+        documentType: 'mise_en_demeure',
+        formDataUsed: formData, // The data used for this specific PDF
+        statusToSet: 'mise_en_demeure', // The new status for the claim
+      });
+    }
   };
 
   return (
-    <form className="space-y-2" onSubmit={e => {e.preventDefault(); generatePDF();}}>
-      <input className="w-full border p-2 rounded" placeholder="Nom de la société créancière" name="societeC" value={form.societeC} onChange={handleChange} required />
-      <input className="w-full border p-2 rounded" placeholder="Adresse créancier" name="adresseC" value={form.adresseC} onChange={handleChange} required />
-      <input className="w-full border p-2 rounded" placeholder="Code postal créancier" name="codePostalC" value={form.codePostalC} onChange={handleChange} required />
-      <input className="w-full border p-2 rounded" placeholder="Ville créancier" name="villeC" value={form.villeC} onChange={handleChange} required />
-
-      <input className="w-full border p-2 rounded" placeholder="Nom de la société débitrice" name="societeD" value={form.societeD} onChange={handleChange} required />
-      <input className="w-full border p-2 rounded" placeholder="Adresse débiteur" name="adresseD" value={form.adresseD} onChange={handleChange} required />
-      <input className="w-full border p-2 rounded" placeholder="Code postal débiteur" name="codePostalD" value={form.codePostalD} onChange={handleChange} required />
-      <input className="w-full border p-2 rounded" placeholder="Ville débiteur" name="villeD" value={form.villeD} onChange={handleChange} required />
-      <input className="w-full border p-2 rounded" placeholder="Nom du représentant légal débiteur" name="representantD" value={form.representantD} onChange={handleChange} required />
-      <input className="w-full border p-2 rounded" placeholder="Fonction du représentant légal débiteur" name="fonctionD" value={form.fonctionD} onChange={handleChange} required />
-
-      <div className="font-bold mt-4 mb-2">Factures</div>
-      {form.factures.map((f, i) => (
-        <div key={i} className="flex flex-wrap gap-2 mb-2">
-          <input className="flex-1 border p-2 rounded" placeholder="N° facture" name="numero" value={f.numero} onChange={e => handleFactureChange(i, e)} />
-          <input className="flex-1 border p-2 rounded" placeholder="Date (JJ/MM/AAAA)" name="date" value={f.date} onChange={e => handleFactureChange(i, e)} />
-          <input className="flex-1 border p-2 rounded" placeholder="Montant TTC" name="montant" value={f.montant} onChange={e => handleFactureChange(i, e)} />
+    <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); generateAndSavePDF(); }}>
+      {/* The form is now for reviewing and making minor edits, not for initial input */}
+      <div>
+        <h3 className="text-lg font-semibold text-gray-700 mb-2 border-b pb-2">Vérifier les informations</h3>
+        <div className="space-y-4">
+            <div className="p-4 border rounded-lg">
+                <h4 className="text-lg font-semibold mb-2">Créancier</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-600">Nom</label>
+                        <input type="text" name="creditorName" value={formData.creditorName} onChange={handleInputChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
+                        {errors.creditorName && <p className="text-red-500 text-xs mt-1">{errors.creditorName}</p>}
+                    </div>
+                </div>
+                <div className="mt-2">
+                    <label className="block text-sm font-medium text-gray-600">Adresse</label>
+                {apiKey ? (
+                    <Autocomplete
+                        apiKey={apiKey}
+                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                        onPlaceSelected={(place) => {
+                            const street = place.address_components.find(c => c.types.includes('route'))?.long_name || '';
+                            const zip = place.address_components.find(c => c.types.includes('postal_code'))?.long_name || '';
+                            const city = place.address_components.find(c => c.types.includes('locality'))?.long_name || '';
+                            setFormData(prev => ({ ...prev, creditorStreet: street, creditorZip: zip, creditorCity: city }));
+                        }}
+                        options={{
+                            types: ["address"],
+                            componentRestrictions: { country: "fr" },
+                        }}
+                    />
+                ) : (
+                    <p className="text-sm text-gray-500">Chargement de l'autocomplétion...</p>
+                )}
+                </div>
+            </div>
+            <div className="p-4 border rounded-lg">
+                <h4 className="text-lg font-semibold mb-2">Débiteur</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-600">Nom</label>
+                        <input type="text" name="debtorName" value={formData.debtorName} onChange={handleInputChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
+                        {errors.debtorName && <p className="text-red-500 text-xs mt-1">{errors.debtorName}</p>}
+                    </div>
+                </div>
+                <div className="mt-2">
+                    <label className="block text-sm font-medium text-gray-600">Adresse</label>
+                {apiKey ? (
+                    <Autocomplete
+                        apiKey={apiKey}
+                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                        onPlaceSelected={(place) => {
+                            const street = place.address_components.find(c => c.types.includes('route'))?.long_name || '';
+                            const zip = place.address_components.find(c => c.types.includes('postal_code'))?.long_name || '';
+                            const city = place.address_components.find(c => c.types.includes('locality'))?.long_name || '';
+                            setFormData(prev => ({ ...prev, debtorStreet: street, debtorZip: zip, debtorCity: city }));
+                        }}
+                        options={{
+                            types: ["address"],
+                            componentRestrictions: { country: "fr" },
+                        }}
+                    />
+                ) : (
+                    <p className="text-sm text-gray-500">Chargement de l'autocomplétion...</p>
+                )}
+                </div>
+            </div>
         </div>
-      ))}
-      <button type="button" onClick={addFacture} className="text-blue-700 underline mb-2">+ Ajouter une facture</button>
-      <div className="font-bold">Total : {total.toFixed(2)} €</div>
-      <button type="submit" className="bg-blue-700 text-white px-4 py-2 rounded mt-2 w-full">Télécharger (PDF)</button>
+      </div>
+      <div className="p-4 border rounded-lg">
+        <h3 className="text-lg font-semibold text-gray-700 mb-2">Détails des factures</h3>
+        {formData.factures.map((f, i) => (
+            <div key={i} className="flex flex-wrap gap-2 mb-2">
+                <input className="flex-1 border p-2 rounded" placeholder="N° facture" name="numero" value={f.numero} onChange={e => handleFactureChange(i, e)} autoComplete="off" />
+                <input className="flex-1 border p-2 rounded" placeholder="Date (JJ/MM/AAAA)" name="date" value={f.date} onChange={e => handleFactureChange(i, e)} />
+                <input className="flex-1 border p-2 rounded" placeholder="Montant TTC" name="montant" value={f.montant} onChange={e => handleFactureChange(i, e)} />
+            </div>
+        ))}
+        <button type="button" onClick={addFacture} className="text-blue-700 underline mb-2">+ Ajouter une facture</button>
+        <div className="font-bold">Total : {formData.factures.reduce((sum, f) => sum + (parseFloat(f.montant) || 0), 0).toFixed(2)} €</div>
+      </div>
+
+      <div className="flex justify-end pt-4">
+        <button
+          type="submit"
+          className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg shadow-lg hover:shadow-xl transition-all duration-150 ease-in-out"
+        >
+          Générer et Télécharger la Mise en Demeure
+        </button>
+      </div>
     </form>
   );
 }

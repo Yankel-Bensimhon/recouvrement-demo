@@ -77,7 +77,8 @@ export default function EditClaimModal({ claim, isOpen, onClose, onSave }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             ...formData,
-            claim_amount: parseFloat(formData.claim_amount) // Ensure amount is a number
+            claim_amount: parseFloat(formData.claim_amount), // Ensure amount is a number
+            recovered_amount: parseFloat(formData.recovered_amount || 0),
         }),
       });
 
@@ -124,14 +125,14 @@ export default function EditClaimModal({ claim, isOpen, onClose, onSave }) {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label htmlFor="edit-claim_amount" className="block text-sm font-medium text-gray-700">Montant (€) *</label>
+              <label htmlFor="edit-claim_amount" className="block text-sm font-medium text-gray-700">Montant Dû (€) *</label>
               <input type="number" name="claim_amount" id="edit-claim_amount" value={formData.claim_amount || ''} onChange={handleChange} required step="0.01"
                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
             </div>
             <div>
-              <label htmlFor="edit-due_date" className="block text-sm font-medium text-gray-700">Date d'échéance</label>
-              <input type="date" name="due_date" id="edit-due_date" value={formData.due_date || ''} onChange={handleChange}
-                     className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
+              <label htmlFor="edit-recovered_amount" className="block text-sm font-medium text-gray-700">Montant Recouvré (€)</label>
+              <input type="number" name="recovered_amount" id="edit-recovered_amount" value={formData.recovered_amount || ''} onChange={handleChange} step="0.01"
+                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
             </div>
           </div>
 

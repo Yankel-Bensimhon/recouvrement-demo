@@ -20,10 +20,12 @@ app.get('/', (req, res) => {
 const claimRoutes = require('./routes/claims');
 const authRoutes = require('./routes/auth');
 const documentRoutes = require('./routes/documents');
+const configRoutes = require('./routes/config');
 
 app.use('/api/claims', claimRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/documents', documentRoutes);
+app.use('/api/config', configRoutes);
 
 
 app.listen(port, () => {

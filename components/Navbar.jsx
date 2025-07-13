@@ -24,7 +24,7 @@ export default function Navbar() {
           <Link href="/pricing" className="block mt-4 md:inline-block md:mt-0 text-gray-600 hover:text-gray-800">Pricing</Link>
           <Link href="/blog" className="block mt-4 md:inline-block md:mt-0 text-gray-600 hover:text-gray-800">Blog</Link>
           <Link href="/contact" className="block mt-4 md:inline-block md:mt-0 text-gray-600 hover:text-gray-800">Contact</Link>
-          <Link href="/auth/signin" className="block mt-4 md:inline-block md:mt-0 text-gray-600 hover:text-gray-800">Connexion</Link>
+          <Link href="/dashboard" className="block mt-4 md:inline-block md:mt-0 text-gray-600 hover:text-gray-800">Connexion</Link>
           <Link href="/auth/signup" className="block mt-4 md:inline-block md:mt-0 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">Inscription</Link>
         </div>
       </div>

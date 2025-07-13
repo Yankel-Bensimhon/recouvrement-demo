@@ -26,6 +26,7 @@ router.post('/', verifyToken, async (req, res) => {
     status = 'nouveau', // Default status
     invoice_reference,
     description,
+    recovered_amount = 0.00, // Default recovered amount
   } = req.body;
 
   const userId = req.user.id; // Extracted from token by middleware
@@ -40,10 +41,10 @@ router.post('/', verifyToken, async (req, res) => {
 
   try {
     const newClaim = await db.query(
-      `INSERT INTO claims (user_id, debtor_name, debtor_email, debtor_address, claim_amount, due_date, status, invoice_reference, description)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      `INSERT INTO claims (user_id, debtor_name, debtor_email, debtor_address, claim_amount, due_date, status, invoice_reference, description, recovered_amount)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        RETURNING *`,
-      [userId, debtor_name, debtor_email, debtor_address, claim_amount, due_date, status, invoice_reference, description]
+      [userId, debtor_name, debtor_email, debtor_address, claim_amount, due_date, status, invoice_reference, description, recovered_amount]
     );
     res.status(201).json(newClaim.rows[0]);
   } catch (err) {
@@ -86,6 +87,7 @@ router.put('/:id', verifyToken, async (req, res) => {
       status,
       invoice_reference,
       description,
+      recovered_amount,
     } = req.body;
 
     // Fetch current claim to ensure it exists and belongs to the user
@@ -106,8 +108,9 @@ router.put('/:id', verifyToken, async (req, res) => {
          status = $6,
          invoice_reference = $7,
          description = $8,
+         recovered_amount = $9,
          updated_at = NOW()
-       WHERE id = $9 AND user_id = $10
+       WHERE id = $10 AND user_id = $11
        RETURNING *`,
       [
         debtor_name !== undefined ? debtor_name : currentClaim.debtor_name,
@@ -118,6 +121,7 @@ router.put('/:id', verifyToken, async (req, res) => {
         status !== undefined ? status : currentClaim.status,
         invoice_reference !== undefined ? invoice_reference : currentClaim.invoice_reference,
         description !== undefined ? description : currentClaim.description,
+        recovered_amount !== undefined ? recovered_amount : currentClaim.recovered_amount,
          id,
          userId // for the WHERE clause
       ]
