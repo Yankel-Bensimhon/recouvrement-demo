@@ -10,6 +10,7 @@ export default function Footer() {
         <Link href="/legal" className="hover:underline">Mentions légales</Link>
         <Link href="/privacy" className="hover:underline">Politique de Confidentialité</Link>
         <Link href="/terms" className="hover:underline">Conditions d'utilisation</Link>
+        <Link href="/contact" className="hover:underline">Contact</Link>
       </div>
     </footer>
   );
