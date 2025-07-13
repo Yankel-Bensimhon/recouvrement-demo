@@ -11,13 +11,21 @@ export default function Home() {
     <>
       <Navbar />
 
-      <section id="hero" className="min-h-[60vh] flex flex-col justify-center items-center bg-gradient-to-br from-blue-900 to-blue-400 text-white text-center py-12 md:py-20">
-        <HeroSection />
-        <a href="#generer-med" className="mt-8">
-          <button className="bg-white text-blue-700 font-semibold px-6 py-3 rounded-xl shadow-lg text-lg">
-            Générer une mise en demeure gratuite
-          </button>
-        </a>
+      <section id="hero" className="relative min-h-[60vh] flex flex-col justify-center items-center text-white text-center py-12 md:py-20">
+        <div
+          className="absolute top-0 left-0 w-full h-full bg-cover bg-center"
+          style={{ backgroundImage: "url('https://images.pexels.com/photos/2110951/pexels-photo-2110951.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2')" }}
+        >
+          <div className="absolute top-0 left-0 w-full h-full bg-black opacity-50"></div>
+        </div>
+        <div className="relative z-10">
+          <HeroSection />
+          <a href="#generer-med" className="mt-8">
+            <button className="bg-white text-blue-700 font-semibold px-6 py-3 rounded-xl shadow-lg text-lg">
+              Générer une mise en demeure gratuite
+            </button>
+          </a>
+        </div>
       </section>
 
       <section id="comment-ca-marche" className="max-w-3xl mx-auto my-12 md:my-16 px-4">
