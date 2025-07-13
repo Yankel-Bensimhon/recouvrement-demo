@@ -5,9 +5,11 @@ export default function MiseEnDemeureGenerator() {
   const [form, setForm] = useState({
     societeC: "",
     adresseC: "",
+    codePostalC: "",
     villeC: "",
     societeD: "",
     adresseD: "",
+    codePostalD: "",
     villeD: "",
     representantD: "",
     fonctionD: "",
@@ -38,9 +40,9 @@ export default function MiseEnDemeureGenerator() {
     y += 12;
     doc.setFont("helvetica", "normal").setFontSize(11);
     doc.text(`Créancier : ${form.societeC}`, 10, y); y += 8;
-    doc.text(`Adresse : ${form.adresseC}, ${form.villeC}`, 10, y); y += 8;
+    doc.text(`Adresse : ${form.adresseC}, ${form.codePostalC} ${form.villeC}`, 10, y); y += 8;
     doc.text(`Débiteur : ${form.societeD}`, 10, y); y += 8;
-    doc.text(`Adresse : ${form.adresseD}, ${form.villeD}`, 10, y); y += 8;
+    doc.text(`Adresse : ${form.adresseD}, ${form.codePostalD} ${form.villeD}`, 10, y); y += 8;
     doc.text(`Représentant légal : ${form.representantD} (${form.fonctionD})`, 10, y); y += 10;
 
     const today = new Date().toLocaleDateString("fr-FR");
@@ -96,12 +98,12 @@ export default function MiseEnDemeureGenerator() {
     <form className="space-y-2" onSubmit={e => {e.preventDefault(); generatePDF();}}>
       <input className="w-full border p-2 rounded" placeholder="Nom de la société créancière" name="societeC" value={form.societeC} onChange={handleChange} required />
       <input className="w-full border p-2 rounded" placeholder="Adresse créancier" name="adresseC" value={form.adresseC} onChange={handleChange} required />
+      <input className="w-full border p-2 rounded" placeholder="Code postal créancier" name="codePostalC" value={form.codePostalC} onChange={handleChange} required />
       <input className="w-full border p-2 rounded" placeholder="Ville créancier" name="villeC" value={form.villeC} onChange={handleChange} required />
-      <input className="w-full border p-2 rounded" placeholder="Nom du représentant légal créancier" name="representantC" value={form.representantC} onChange={handleChange} required />
-      <input className="w-full border p-2 rounded" placeholder="Fonction du représentant légal créancier" name="fonctionC" value={form.fonctionC} onChange={handleChange} required />
 
       <input className="w-full border p-2 rounded" placeholder="Nom de la société débitrice" name="societeD" value={form.societeD} onChange={handleChange} required />
       <input className="w-full border p-2 rounded" placeholder="Adresse débiteur" name="adresseD" value={form.adresseD} onChange={handleChange} required />
+      <input className="w-full border p-2 rounded" placeholder="Code postal débiteur" name="codePostalD" value={form.codePostalD} onChange={handleChange} required />
       <input className="w-full border p-2 rounded" placeholder="Ville débiteur" name="villeD" value={form.villeD} onChange={handleChange} required />
       <input className="w-full border p-2 rounded" placeholder="Nom du représentant légal débiteur" name="representantD" value={form.representantD} onChange={handleChange} required />
       <input className="w-full border p-2 rounded" placeholder="Fonction du représentant légal débiteur" name="fonctionD" value={form.fonctionD} onChange={handleChange} required />
