@@ -108,7 +108,7 @@ export default function MiseEnDemeureGenerator() {
 
       <div className="font-bold mt-4 mb-2">Factures</div>
       {form.factures.map((f, i) => (
-        <div key={i} className="flex gap-2 mb-2">
+        <div key={i} className="flex flex-wrap gap-2 mb-2">
           <input className="flex-1 border p-2 rounded" placeholder="N° facture" name="numero" value={f.numero} onChange={e => handleFactureChange(i, e)} />
           <input className="flex-1 border p-2 rounded" placeholder="Date (JJ/MM/AAAA)" name="date" value={f.date} onChange={e => handleFactureChange(i, e)} />
           <input className="flex-1 border p-2 rounded" placeholder="Montant TTC" name="montant" value={f.montant} onChange={e => handleFactureChange(i, e)} />

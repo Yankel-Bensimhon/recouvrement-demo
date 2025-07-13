@@ -11,7 +11,7 @@ export default function Home() {
     <>
       <Navbar />
 
-      <section id="hero" className="min-h-[60vh] flex flex-col justify-center items-center bg-gradient-to-br from-blue-900 to-blue-400 text-white text-center py-20">
+      <section id="hero" className="min-h-[60vh] flex flex-col justify-center items-center bg-gradient-to-br from-blue-900 to-blue-400 text-white text-center py-12 md:py-20">
         <HeroSection />
         <a href="#generer-med" className="mt-8">
           <button className="bg-white text-blue-700 font-semibold px-6 py-3 rounded-xl shadow-lg text-lg">
@@ -20,23 +20,23 @@ export default function Home() {
         </a>
       </section>
 
-      <section id="comment-ca-marche" className="max-w-3xl mx-auto my-16">
-        <h2 className="text-3xl font-bold text-blue-900 mb-8 text-center">Comment ça marche ?</h2>
+      <section id="comment-ca-marche" className="max-w-3xl mx-auto my-12 md:my-16 px-4">
+        <h2 className="text-2xl md:text-3xl font-bold text-blue-900 mb-8 text-center">Comment ça marche ?</h2>
         <TimeLineRecouvrement />
       </section>
 
-      <section id="agir-en-justice" className="max-w-4xl mx-auto my-16">
-        <h2 className="text-3xl font-bold text-blue-900 mb-8 text-center">Agir en justice</h2>
+      <section id="agir-en-justice" className="max-w-4xl mx-auto my-12 md:my-16 px-4">
+        <h2 className="text-2xl md:text-3xl font-bold text-blue-900 mb-8 text-center">Agir en justice</h2>
         <LegalModes />
       </section>
 
-      <section id="avantages" className="max-w-4xl mx-auto my-16">
-        <h2 className="text-3xl font-bold text-blue-900 mb-8 text-center">Avantages de nos services</h2>
+      <section id="avantages" className="max-w-4xl mx-auto my-12 md:my-16 px-4">
+        <h2 className="text-2xl md:text-3xl font-bold text-blue-900 mb-8 text-center">Avantages de nos services</h2>
         <AvantagesAvocat />
       </section>
 
-      <section id="generer-med" className="max-w-xl mx-auto my-16 bg-white rounded-xl shadow-lg p-6">
-        <h2 className="text-2xl font-bold mb-4">Générateur de mise en demeure</h2>
+      <section id="generer-med" className="max-w-xl mx-auto my-12 md:my-16 bg-white rounded-xl shadow-lg p-6 px-4">
+        <h2 className="text-xl md:text-2xl font-bold mb-4">Générateur de mise en demeure</h2>
         <MiseEnDemeureGenerator />
       </section>
 
