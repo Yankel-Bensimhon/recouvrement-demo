@@ -42,3 +42,5 @@ pids
 .vscode/
 *.swp
 *~
+
+/generated/prisma
