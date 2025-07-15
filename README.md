@@ -13,6 +13,16 @@
 3. Importez le projet, cliquez sur "Deploy"
 4. Votre démo est en ligne (URL .vercel.app)
 
+### Configuration de l'URL du backend
+
+En production, le frontend doit savoir à quelle adresse se trouve le serveur
+Express. Définissez la variable d'environnement `BACKEND_URL` avec l'URL
+publique de votre backend (par exemple `https://api.monsite.com`). Si la
+variable n'est pas présente, le proxy utilise `http://localhost:3001`.
+
+Assurez‑vous également que `NEXTAUTH_URL` pointe vers le domaine de votre site
+(ex. `https://votre-projet.vercel.app`) pour que l'authentification fonctionne.
+
 - Formulaire de mise en demeure (frontend uniquement pour l'instant)
 - Dashboard de suivi des créances (connecté à un backend basique)
 - Générateur d'injonction de payer (frontend uniquement pour l'instant)
@@ -82,6 +92,26 @@ Si vous préférez lancer le frontend Next.js localement en dehors de Docker (pa
 *   `routes/`: Contient les fichiers de routes pour les différentes API (ex: `claims.js`).
 *   `Dockerfile`: Instructions pour construire l'image Docker du backend.
 *   `.env.example`: Modèle pour les variables d'environnement du backend.
+
+### Créer un compte superadmin
+
+Pour disposer d'un utilisateur administrateur par défaut, vous pouvez ajouter un
+enregistrement dans la base de données après le premier lancement. Exemple avec
+`psql` :
+
+```bash
+docker-compose exec db psql -U $DB_USER -d $DB_NAME \
+  -c "INSERT INTO users (email, password_hash, company_name) VALUES ('yankel1234@hotmail.com', '<HASH_BCRYPT>', 'SuperAdmin') ON CONFLICT DO NOTHING;"
+```
+
+Remplacez `<HASH_BCRYPT>` par le hachage bcrypt du mot de passe
+`Admin1429`. Vous pouvez le générer avec Node.js :
+
+```bash
+node -e "require('bcryptjs').hash('Admin1429', 10).then(h => console.log(h))"
+```
+
+La commande affiche le hachage à utiliser dans l'instruction SQL.
 
 ## Prochaines Étapes Prévues
 
