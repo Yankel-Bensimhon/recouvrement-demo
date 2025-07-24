@@ -1,4 +1,4 @@
-import type { NextApiRequest, NextApiResponse } from 'next'
+import { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '../../../lib/prisma'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -15,8 +15,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (req.method === 'POST') {
-    const { debtor_name, status, userId, claim_amount } = req.body
-    if (!debtor_name || !status || !userId || !claim_amount) {
+    const { debtor_name, status, user_id, claim_amount } = req.body
+    if (!debtor_name || !status || !user_id || !claim_amount) {
       return res.status(400).json({ message: 'Champs requis manquants' })
     }
 
@@ -25,14 +25,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         data: {
           debtor_name,
           status,
-          userId,
+          user_id,
           claim_amount
         },
       })
       return res.status(201).json(claim)
     } catch (error) {
       console.error(error)
-      return res.status(500).json({ message: 'Erreur serveur lors de la création' })
+      return res.status(500).json({ message: 'Erreur serveur' })
     }
   }
 
