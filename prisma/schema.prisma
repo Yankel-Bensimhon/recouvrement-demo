@@ -8,19 +8,47 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  name      String?
-  role      String   @default("client")
-  dossiers  Dossier[]
+  id           Int        @id @default(autoincrement())
+  email        String     @unique
+  password_hash String
+  company_name String?
+  created_at   DateTime   @default(now())
+  updated_at   DateTime   @updatedAt
+  claims       Claim[]
+  documents    Document[]
+
+  @@map("users")
 }
 
-model Dossier {
-  id          String   @id @default(uuid())
-  titre       String
-  status      String   @default("en_attente")
-  userId      String
-  user        User     @relation(fields: [userId], references: [id])
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+model Claim {
+  id                Int        @id @default(autoincrement())
+  user_id           Int
+  debtor_name       String
+  debtor_email      String?
+  debtor_address    String?
+  claim_amount      Decimal    @db.Decimal(10, 2)
+  due_date          DateTime?
+  status            String     @default("nouveau")
+  invoice_reference String?
+  description       String?
+  created_at        DateTime   @default(now())
+  updated_at        DateTime   @updatedAt
+  user              User       @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  documents         Document[]
+
+  @@map("claims")
+}
+
+model Document {
+  id            Int      @id @default(autoincrement())
+  claim_id      Int
+  user_id       Int?
+  document_type String
+  file_path     String?
+  generated_at  DateTime @default(now())
+  data          Json?
+  claim         Claim    @relation(fields: [claim_id], references: [id], onDelete: Cascade)
+  user          User?    @relation(fields: [user_id], references: [id])
+
+  @@map("documents")
 }

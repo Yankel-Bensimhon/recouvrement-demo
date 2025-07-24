@@ -1,39 +1,25 @@
 import { useEffect, useState } from 'react'
+import { Claim, User } from '@prisma/client'
 
-interface Dossier {
-  id: string
-  titre: string
-  status: string
-  createdAt: string
-  user: {
-    email: string
-  }
-}
+const STATUSES = ['nouveau', 'mise_en_demeure', 'injonction', 'solde', 'perdu']
 
-interface User {
-  id: string
-  email: string
-}
-
-const STATUTS = ['en_attente', 'en_cours', 'clôturé']
-
-export default function AdminDossiersPage() {
-  const [dossiers, setDossiers] = useState<Dossier[]>([])
+export default function AdminClaimsPage() {
+  const [claims, setClaims] = useState<Claim[]>([])
   const [users, setUsers] = useState<User[]>([])
-  const [form, setForm] = useState({ titre: '', status: 'en_attente', userId: '' })
+  const [form, setForm] = useState({ debtor_name: '', status: 'nouveau', userId: '' })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    fetch('/api/dossiers')
+    fetch('/api/claims')
       .then((res) => res.json())
       .then((data) => {
-        setDossiers(data)
+        setClaims(data)
         setLoading(false)
       })
       .catch((err) => {
         console.error(err)
-        setError('Erreur lors du chargement des dossiers')
+        setError('Erreur lors du chargement des créances')
         setLoading(false)
       })
 
@@ -44,28 +30,28 @@ export default function AdminDossiersPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    const res = await fetch('/api/dossiers', {
+    const res = await fetch('/api/claims', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form),
     })
     if (res.ok) {
-      const newDossier = await res.json()
-      setDossiers([newDossier, ...dossiers])
-      setForm({ titre: '', status: 'en_attente', userId: '' })
+      const newClaim = await res.json()
+      setClaims([newClaim, ...claims])
+      setForm({ debtor_name: '', status: 'nouveau', userId: '' })
     }
   }
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Dossiers en cours</h1>
+      <h1 className="text-2xl font-bold mb-4">Créances en cours</h1>
 
       <form onSubmit={handleSubmit} className="mb-6 space-x-2">
         <input
           type="text"
-          placeholder="Titre"
-          value={form.titre}
-          onChange={(e) => setForm({ ...form, titre: e.target.value })}
+          placeholder="Nom du débiteur"
+          value={form.debtor_name}
+          onChange={(e) => setForm({ ...form, debtor_name: e.target.value })}
           className="border px-2 py-1"
           required
         />
@@ -74,7 +60,7 @@ export default function AdminDossiersPage() {
           onChange={(e) => setForm({ ...form, status: e.target.value })}
           className="border px-2 py-1"
         >
-          {STATUTS.map((s) => (
+          {STATUSES.map((s) => (
             <option key={s} value={s}>{s}</option>
           ))}
         </select>
@@ -97,28 +83,28 @@ export default function AdminDossiersPage() {
       {loading && <p>Chargement...</p>}
       {error && <p className="text-red-500">{error}</p>}
 
-      {!loading && dossiers.length === 0 && (
-        <p className="text-orange-500">Aucun dossier trouvé.</p>
+      {!loading && claims.length === 0 && (
+        <p className="text-orange-500">Aucune créance trouvée.</p>
       )}
 
-      {!loading && dossiers.length > 0 && (
+      {!loading && claims.length > 0 && (
         <table className="w-full table-auto border border-collapse">
           <thead className="bg-gray-100">
             <tr>
-              <th className="border px-4 py-2">Titre</th>
+              <th className="border px-4 py-2">Débiteur</th>
               <th className="border px-4 py-2">Statut</th>
               <th className="border px-4 py-2">Client</th>
               <th className="border px-4 py-2">Créé le</th>
             </tr>
           </thead>
           <tbody>
-            {dossiers.map((d) => (
-              <tr key={d.id}>
-                <td className="border px-4 py-2">{d.titre}</td>
-                <td className="border px-4 py-2">{d.status}</td>
-                <td className="border px-4 py-2">{d.user?.email}</td>
+            {claims.map((c) => (
+              <tr key={c.id}>
+                <td className="border px-4 py-2">{c.debtor_name}</td>
+                <td className="border px-4 py-2">{c.status}</td>
+                <td className="border px-4 py-2">{c.user?.email}</td>
                 <td className="border px-4 py-2">
-                  {new Date(d.createdAt).toLocaleDateString('fr-FR')}
+                  {new Date(c.createdAt).toLocaleDateString('fr-FR')}
                 </td>
               </tr>
             ))}

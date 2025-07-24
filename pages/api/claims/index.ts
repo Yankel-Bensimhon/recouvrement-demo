@@ -4,27 +4,32 @@ import { prisma } from '../../../lib/prisma'
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'GET') {
     try {
-      const dossiers = await prisma.dossier.findMany({
+      const claims = await prisma.claim.findMany({
         include: { user: true },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { created_at: 'desc' },
       })
-      return res.status(200).json(dossiers)
+      return res.status(200).json(claims)
     } catch (error) {
       return res.status(500).json({ message: 'Erreur serveur' })
     }
   }
 
   if (req.method === 'POST') {
-    const { titre, status, userId } = req.body
-    if (!titre || !status || !userId) {
+    const { debtor_name, status, userId, claim_amount } = req.body
+    if (!debtor_name || !status || !userId || !claim_amount) {
       return res.status(400).json({ message: 'Champs requis manquants' })
     }
 
     try {
-      const dossier = await prisma.dossier.create({
-        data: { titre, status, userId },
+      const claim = await prisma.claim.create({
+        data: {
+          debtor_name,
+          status,
+          userId,
+          claim_amount
+        },
       })
-      return res.status(201).json(dossier)
+      return res.status(201).json(claim)
     } catch (error) {
       console.error(error)
       return res.status(500).json({ message: 'Erreur serveur lors de la création' })
