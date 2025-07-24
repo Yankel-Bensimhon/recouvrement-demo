@@ -102,7 +102,7 @@ export default function AdminClaimsPage() {
               <tr key={c.id}>
                 <td className="border px-4 py-2">{c.debtor_name}</td>
                 <td className="border px-4 py-2">{c.status}</td>
-                <td className="border px-4 py-2">{c.user?.email}</td>
+                <td className="border px-4 py-2">{c.user_id}</td>
                 <td className="border px-4 py-2">
                   {new Date(c.createdAt).toLocaleDateString('fr-FR')}
                 </td>
