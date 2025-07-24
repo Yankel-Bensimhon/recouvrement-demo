@@ -104,7 +104,7 @@ export default function AdminClaimsPage() {
                 <td className="border px-4 py-2">{c.status}</td>
                 <td className="border px-4 py-2">{c.user_id}</td>
                 <td className="border px-4 py-2">
-                  {new Date(c.createdAt).toLocaleDateString('fr-FR')}
+                  {new Date(c.created_at).toLocaleDateString('fr-FR')}
                 </td>
               </tr>
             ))}
